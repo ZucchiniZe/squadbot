@@ -3,17 +3,22 @@ import aiohttp
 
 from discord.ext import commands
 
-DESC = '''A discord bot made specially for the everest discord featuring such
+initial_extensions = [
+    'cogs.music',
+    'cogs.images',
+    'cogs.misc',
+    'cogs.admin',
+    'cogs.repl'
+]
+
+description = '''A discord bot made specially for the everest discord featuring such
 spicy memes as the testing noise, and others.
 
 Made by alex
 '''
 
-if not discord.opus.is_loaded():
-    discord.opus.load_opus('opus')
-
-bot = commands.Bot(command_prefix='::', description=DESC)
-state = {'voice': None}
+prefixes = ['?', '!', '::']
+bot = commands.Bot(command_prefix=prefixes, description=description)
 
 @bot.event
 async def on_ready():
@@ -21,58 +26,27 @@ async def on_ready():
 
     await bot.change_presence(game=discord.Game(name='TIOS, lets pass those CAs'))
 
-@bot.command(pass_context=True)
-async def test(ctx):
-    counter = 0
-    tmp = await bot.say('Calculating messages...')
-    async for log in bot.logs_from(ctx.message.channel, limit=1000):
-        if log.author == ctx.message.author:
-            counter += 1
-    await bot.edit_message(tmp, 'You have contributed {} messages to {} in the last 1000 messages.'.format(counter, ctx.message.channel.mention))
+@bot.event
+async def on_resume():
+    print('resumed...')
 
-    return True
+@bot.event
+async def on_command_error(error, ctx):
+    if isinstance(error, commands.NoPrivateMessage):
+        await bot.send_message(ctx.message.author, 'This command cannot be used in private messages.')
+    elif isinstance(error, commands.DisabledCommand):
+        await bot.send_message(ctx.message.author, 'Sorry. This command is disabled and cannot be used.')
+    elif isinstance(error, commands.CommandInvokeError):
+        print('In {0.command.qualified_name}:'.format(ctx), file=sys.stderr)
+        traceback.print_tb(error.original.__traceback__)
+        print('{0.__class__.__name__}: {0}'.format(error.original), file=sys.stderr)
 
-@bot.command()
-async def cat():
-    async with aiohttp.get('http://random.cat/meow') as r:
-        if r.status == 200:
-            js = await r.json()
-            await bot.say(js['file'])
+if __name__ == '__main__':
+    for extension in initial_extensions:
+        try:
+            bot.load_extension(extension)
+        except Exception as e:
+            print('Failed to load extension {}\n{}: {}'.format(extension, type(e).__name__, e))
 
-    return True
 
-@bot.command(pass_context=True)
-async def summon(ctx):
-    summoned_channel = ctx.message.author.voice_channel
-    if summoned_channel is None:
-        await bot.say('You ain\'t in a voice channel bitch')
-        return False
-
-    if state['voice'] is None:
-        state['voice'] = await bot.join_voice_channel(summoned_channel)
-        await bot.say('Joining {}'.format(summoned_channel))
-    else:
-        await state['voice'].move_to(summoned_channel)
-        await bot.say('Moving to {}'.format(summoned_channel))
-
-    return True
-
-@bot.command()
-async def leave():
-    await bot.say('Leaving {}'.format(state['voice'].channel.name))
-    await state['voice'].disconnect()
-
-    return True
-
-@bot.command(pass_context=True)
-async def play(ctx, url):
-    voice = state['voice']
-    player = await voice.create_ytdl_player(url)
-    state['player'] = player
-
-    await bot.say('Playing {} as requested by {}'.format(url, ctx.message.author.name))
-    player.start()
-
-    return True
-
-bot.run('MjgwOTcyODUyMTg5MjAwMzg1.C4WgUA.aQkJfNpfKTc2duIny3Dt9dWIQPA')
+    bot.run('MjgwOTcyODUyMTg5MjAwMzg1.C4WgUA.aQkJfNpfKTc2duIny3Dt9dWIQPA')
