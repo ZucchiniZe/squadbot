@@ -3,6 +3,8 @@ import asyncio
 
 from discord.ext import commands
 
+from .utils import checks
+
 if not discord.opus.is_loaded():
     discord.opus.load_opus('opus')
 
@@ -211,6 +213,15 @@ class Music:
         else:
             await self.bot.say('You have already voted to skip this song')
 
+    @commands.command(pass_context=True, hidden=True)
+    @checks.is_owner()
+    async def askip(self, ctx):
+        """Admin command to skip the current song and delete message"""
+        state = self.get_voice_state(ctx.message.server)
+        if state.is_playing():
+            state.skip()
+        await self.bot.delete_message(ctx.message)
+        
     @commands.command(pass_context=True)
     async def playing(self, ctx):
         """Shows info about the currently played song."""
