@@ -15,7 +15,7 @@ class Sounds:
         return self.db.dump()
 
     def __unload(self):
-        pass
+        self.db.dump()
 
     @commands.group(pass_context=True, aliases=('sb',))
     async def soundbank(self, ctx):
